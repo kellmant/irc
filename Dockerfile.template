@@ -1,0 +1,21 @@
+IMPORT /efs/deploy/DockerBuild/overlay
+IMPORT /efs/deploy/DockerBuild/ttyd
+RUN \
+	echo -n "Gateway In The Sky Project " > /etc/motd && \
+	echo -n "Securing Labs IRC Client Shell [Alpine:latest] " >> /etc/motd && \
+	echo -n "overlaynetwork[TRUSTED] " >> /etc/motd && \
+	apk -Uuvv add --no-cache tini tzdata build-base gcc abuild binutils cmake libffi-dev \
+	openssl util-linux coreutils findutils grep fontconfig \
+	jq less linux-headers perl irssi irssi-perl \ 
+	bc ncurses ncurses-libs ncurses-terminfo libevent tmux xdg-utils && \
+	apk del --purge build-base gcc abuild binutils cmake libffi-dev linux-headers && \
+	rm -rf /root/.cache && \
+	rm -rf /tmp/* && \
+	rm -rf /var/cache/apk/*
+COPY IRC /IRC
+EXPOSE 3000
+USER ctrl
+ENV PATH=~/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin ETCDCTL_STRICT_HOST_KEY_CHECKING=false FLEETCTL_STRICT_HOST_KEY_CHECKING=false ETCDCTL_ENDPOINTS=http://keystore:2379 TERM=xterm
+WORKDIR /ctrl
+ENTRYPOINT ["/sbin/tini", "-g", "--", "/usr/local/bin/ttyd", "-r", "1", "-p", "3000", "-S", "-C", "/ca/local.cert.pem", "-K", "/ca/local.key.pem"]
+CMD ["/IRC"]

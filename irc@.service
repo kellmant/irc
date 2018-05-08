@@ -1,0 +1,42 @@
+[Unit]
+Description=%p for %i 
+
+[Service]
+EnvironmentFile=/etc/environment
+EnvironmentFile=-/efs/deploy/env/%i
+TimeoutStartSec=0
+Restart=always
+RestartSec=2s
+KillMode=none
+
+# PreStart
+ExecStartPre=-/usr/bin/docker network create %p-%i
+ExecStartPre=-/usr/bin/docker stop %p.%i
+ExecStartPre=-/usr/bin/docker kill %p.%i
+ExecStartPre=-/usr/bin/docker rm %p.%i
+ExecStartPre=-/bin/bash -c 'etcdctl set stream "%H | $(date +\"%%a %%r\") | %N container coming ONLINE "'
+ExecStartPre=-/usr/bin/docker pull registry:5000/%p:latest
+
+# Start
+ExecStart=/usr/bin/docker run --rm -h %i --name %p.%i --network=%p-%i -e TZ="America/Toronto" -e TSOCK=%i -v /efs/deploy/InterdimensionalPortalService:/.IPS:ro -v /efs/ca/usr/%i:/tls:ro -v /efs/ca/local:/ca:ro -v /efs/home/%i/%p:/ctrl -P registry:5000/%p:latest
+ExecStartPost=-/usr/bin/etcdctl rm fail/%p/%i
+ExecStartPost=-/usr/bin/etcdctl set env/app/%p.%i/proto "https"
+ExecStartPost=-/usr/bin/etcdctl set env/app/%p.%i/inc "websockets"
+ExecStartPost=-/usr/bin/etcdctl set env/app/%p.%i/auth "%i"
+ExecStartPost=-/usr/bin/docker network connect %p-%i gw
+ExecStartPost=-/bin/bash -c 'etcdctl set stream "%H | $(date +\"%%a %%r\") | Service published to https://%p.%i.$(etcdctl get env/global/dev) "'
+ExecStartPost=-/bin/bash -c 'sleep 6 ; etcdctl set dev/%p.%i/%i "%H:$(docker port %p.%i | cut -d : -f 2)"'
+ExecStartPost=-/bin/bash -c 'etcdctl set ops/net/%i/%p "$(docker port %p.%i | cut -d / -f 1)"' 
+
+# Stop
+ExecStop=-/usr/bin/etcdctl rm dev/%p.%i/%i
+ExecStopPost=-/usr/bin/etcdctl rm ops/net/%i/%p
+ExecStopPost=-/bin/bash -c 'etcdctl set stream "%H | $(date +\"%%a %%r\") | https://%p.%i.$(etcdctl get env/global/dev) OFFLINE"'
+
+# PostStop
+ExecStopPost=-/bin/bash -c 'etcdctl set fail/%p/%i "$(date -u +%%s)"'
+ExecStopPost=-/usr/bin/docker stop %p.%i
+ExecStopPost=-/usr/bin/docker rm %p.%i
+
+[X-Fleet]
+

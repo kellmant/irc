@@ -1,0 +1,25 @@
+#!/bin/bash
+
+source /efs/deploy/.corebuild
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd $DIR
+. ./tested
+
+jobstart "$$"
+trap "jobtrace '$$'" 0 1 2 3 6
+echo "our buildstate is $buildstage for $buildobj"
+echo "in overlay network $overlay"
+
+mkdir -p $DIR/certs
+cp /efs/ca/root/*.cert.pem ${DIR}/certs/
+rm -rf ${DIR}/certs/ca-chain.cert.pem
+docker rmi registry:5000/${buildobj}:${buildstage}
+docker build -t registry:5000/${buildobj}:${buildstage} .
+docker push registry:5000/${buildobj}:${buildstage}
+docker rmi registry:5000/${buildobj}:${buildstage}
+rm -rf ${DIR}/certs
+
+fleetctl submit ${buildobj}@.service
+
+
+

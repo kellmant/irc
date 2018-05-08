@@ -1,0 +1,13 @@
+#!/bin/bash
+#set -eo pipefail
+
+#MYBUD="$@"
+#tstamp=$(date +"%H%M-%d-%m-%y")
+#mkdir -p /hack/${MYBUD}
+#mv -f /hack/${MYBUD}/index.html /hack/${MYBUD}/${tstamp}.html
+#mv -f /hack/${MYBUD}/live.html /hack/${MYBUD}/index.html
+
+#TermRecord -o /hack/${MYBUD}/live.html -c '/bin/bash'
+#exec /usr/local/bin/ttyd -r 1 -p 3000 -S -C /ca/local.cert.pem -K /ca/local.key.pem /bin/bash
+tmux new -A -s ircshell
+
